@@ -58,6 +58,12 @@ string hostname(){
 
 // Helper, find the source directory from CMake
 static string git_get_srcdir_from_cmake(){
+    //print cwd location
+    char cwd[1024];
+    if (getcwd(cwd, sizeof(cwd)) != nullptr)
+    {
+        cout << "Current working dir: " << cwd << endl;
+    }
     if(!filesystem::exists("CMakeCache.txt")) return "";
     string result;
 
@@ -88,7 +94,8 @@ static string git_get_srcdir_from_makefile(){
     constexpr size_t buffer_sz = 512;
     char buffer[buffer_sz];
 
-    FILE* fp = popen("make -n -p | awk '/^srcdir\\s*:?=/ {print $NF}'", "r");
+    FILE* fp = popen("make -n -p | awk -F '[:=]' '/^srcdir[ \\t]*[:=]/ { gsub(/^[ \\t]+|[ \\t]+$/, \"\", $2); print $2 }'", "r");
+
     if(fp == nullptr){
         cerr << "[get_srcdir_from_makefile] WARNING: Cannot execute make: " << strerror(errno) << endl;
         return "";
@@ -118,19 +125,20 @@ static string git_read_last_commit(){
     }
 
     char* result = fgets(buffer, buffer_sz, fp);
-    if(result != buffer){
+    if(result == nullptr){
         cerr << "[git_read_last_commit] WARNING: Cannot read the result from git: " << strerror(errno) << endl;
-    } else {
-        // (chomp) truncate the string at the first '\n'
-        strtok(result, "\n");
+        pclose(fp);
+        return "";
     }
-
+    // (chomp) truncate the string at the first '\n'
+    strtok(result, "\n");
     pclose(fp);
     return result;
 }
 
 string git_last_commit(){
     auto basedir = filesystem::directory_executable();
+    std::cout << "[git_last_commit] INFO: basedir: " << basedir << std::endl;
     filesystem::TemporaryWorkingDirectory tmpwd{basedir}; // restore the previous wd on exit
 
     // move to the source directory if possible
@@ -138,6 +146,7 @@ string git_last_commit(){
     if(srcdir.empty()){ // try again with Makefile
         srcdir = git_get_srcdir_from_makefile();
     }
+    cerr<< "[git_last_commit] INFO: srcdir: " << srcdir << endl;
     if(!srcdir.empty()) {
         int rc = chdir(srcdir.c_str());
         if (rc != 0) {
