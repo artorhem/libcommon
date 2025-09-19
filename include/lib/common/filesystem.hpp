@@ -20,6 +20,7 @@
 #define COMMON_FILESYSTEM_HPP
 
 #include <string>
+#include <cstdint>
 
 namespace common::filesystem {
 
