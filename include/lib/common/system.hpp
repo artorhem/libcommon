@@ -19,6 +19,7 @@
 #define COMMON_SYSTEM_HPP
 
 #include <string>
+#include <cstdint>
 
 namespace common {
 
