@@ -94,7 +94,7 @@ static string git_get_srcdir_from_makefile(){
     constexpr size_t buffer_sz = 512;
     char buffer[buffer_sz];
 
-    FILE* fp = popen("make -n -p | awk -F '[:=]' '/^srcdir[ \\t]*[:=]/ { gsub(/^[ \\t]+|[ \\t]+$/, \"\", $2); print $2 }'", "r");
+    FILE* fp = popen("make -n -p | awk '/^srcdir[ \\t]*[:=]/ { sub(/^srcdir[ \\t]*[:=]+[ \\t]*/, \"\"); print }'", "r");
 
     if(fp == nullptr){
         cerr << "[get_srcdir_from_makefile] WARNING: Cannot execute make: " << strerror(errno) << endl;
@@ -103,10 +103,11 @@ static string git_get_srcdir_from_makefile(){
     char* result = fgets(buffer, buffer_sz, fp);
     if(result != buffer){
         cerr << "[get_srcdir_from_makefile] WARNING: Cannot read the result from make: " << strerror(errno) << endl;
-    } else {
-        // (chomp) truncate the string at the first '\n'
-        strtok(result, "\n");
+        pclose(fp);
+        return "";
     }
+    // (chomp) truncate the string at the first '\n'
+    strtok(result, "\n");
 
     pclose(fp);
     return result;
